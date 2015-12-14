@@ -29,7 +29,7 @@ LMS_ENDPOINTS = [
     "courses/course-v1:edX+DemoX+Demo_Course/info",
     "courses/course-v1:edX+DemoX+Demo_Course/discussion/forum",
     "courses/course-v1:edX+DemoX+Demo_Course/progress",
-    "courses/v1/blocks/?course_id=course-v1%3AedX%2BDemoX%2BDemo_Course"
+    "courses/v1/blocks/?course_id=course-v1:edX%2BDemoX%2BDemo_Course"
 ]
 STUDIO_ENDPOINTS = [
     "",
@@ -181,12 +181,15 @@ class SshThings(object):
         output = stdout.read()
         if "failed=0" in output:
             print "Update successful"
+
             print "Running Migrations"
-            stdin, stdout, stderr = self.ssh.exec_command("cd /edx/app/edxapp/edx-platform; sudo -u www-data /edx/app/edxapp/venvs/edxapp/bin/python ./manage.py lms syncdb --migrate --settings aws")
+            self.ssh.exec_command("sudo su edxapp -s /bin/bash; cd ~; source edxapp_env; python /edx/app/edxapp/edx-platform/manage.py {lms/cms} syncdb --migrate --settings=aws")
             print "Restarting services"
             self.ssh.exec_command("sudo /edx/bin/supervisorctl restart edxapp_worker:")
             self.ssh.exec_command("sudo /edx/bin/supervisorctl restart edxapp:*")
             print "Servers restarted"
+        else:
+            print "Update not successful"
 
 
     def check_server_var(self, server_var, vars_to_check):
@@ -213,9 +216,7 @@ def main():
     username = SSH_USERNAME or args.user or raw_input('Enter User with SSH access: ')
     print "User for sandbox: " + username
 
-    qa_user = QA()
-    qa_user.check_basic_auth()
-    qa_user.quality_check()
+
 
     ssh_thing = SshThings(sandbox_url, username)
 
@@ -224,6 +225,10 @@ def main():
     ssh_thing.poke_sandbox()
 
     ssh_thing.check_server_var("lms.env.json", LMS_SERVER_VARS)
+
+    qa_user = QA()
+    qa_user.check_basic_auth()
+    qa_user.quality_check()
 
 
 if __name__ == "__main__":
