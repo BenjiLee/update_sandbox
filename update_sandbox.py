@@ -29,7 +29,6 @@ LMS_ENDPOINTS = [
     "courses/course-v1:edX+DemoX+Demo_Course/info",
     "courses/course-v1:edX+DemoX+Demo_Course/discussion/forum",
     "courses/course-v1:edX+DemoX+Demo_Course/progress",
-    "courses/v1/blocks/?course_id=course-v1:edX%2BDemoX%2BDemo_Course"
 ]
 STUDIO_ENDPOINTS = [
     "",
@@ -183,14 +182,14 @@ class SshThings(object):
             print "Update successful"
 
             print "Running Migrations"
-            self.ssh.exec_command("sudo su edxapp -s /bin/bash; cd ~; source edxapp_env; python /edx/app/edxapp/edx-platform/manage.py {lms/cms} syncdb --migrate --settings=aws")
+            self.ssh.exec_command("cd /edx/app/edxapp/edx-platform; sudo -u www-data /edx/bin/python.edxapp /edx/bin/manage.edxapp lms --settings aws migrate")
+            self.ssh.exec_command("cd /edx/app/edxapp/edx-platform; sudo -u www-data /edx/bin/python.edxapp /edx/bin/manage.edxapp cms --settings aws migrate")
             print "Restarting services"
             self.ssh.exec_command("sudo /edx/bin/supervisorctl restart edxapp_worker:")
             self.ssh.exec_command("sudo /edx/bin/supervisorctl restart edxapp:*")
             print "Servers restarted"
         else:
             print "Update not successful"
-
 
     def check_server_var(self, server_var, vars_to_check):
         print "**************{}*********************".format(server_var)
@@ -220,7 +219,8 @@ def main():
 
     ssh_thing = SshThings(sandbox_url, username)
 
-    ssh_thing.update_sandbox(args.repo, args.branch)
+    if args.repo and args.branch:
+        ssh_thing.update_sandbox(args.repo, args.branch)
 
     ssh_thing.poke_sandbox()
 
